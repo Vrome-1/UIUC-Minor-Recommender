@@ -25,7 +25,17 @@ interface JobResponse {
 export default function Jobs() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { major, minor, minorDataStored} = location.state || { major: "", minor: "", minorDataStored: { percentages: {}, top_minors: [] }};
+  const {
+    major = "",
+    minor = "",
+    minorDataStored = { percentages: {}, top_minors: [] },
+    storedSubject = "",
+    storedClassesData = [],
+    storedCurrentClasses = [],
+    storedSelectedClasses = [],
+    storedOffset = null,
+    storedEndOffset = null
+  } = location.state || {};
   const [jobs, setJobs] = useState<Job[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -101,8 +111,35 @@ export default function Jobs() {
     fetchJobs();
   }, []);
 
-  const goToSecondaryPage = () => {
-    navigate('/secondary', { state: {minorData: minorDataStored, selectedMajor: major} });
+  const goToCareerInsights = () => {
+    window.scrollTo(0, 0);
+    navigate('/careerinsights', {
+      state: {
+        minorData: minorDataStored,
+        selectedMajor: major,
+        storedSubject,
+        storedClassesData,
+        storedCurrentClasses,
+        storedSelectedClasses,
+        storedOffset,
+        storedEndOffset
+      }
+    });
+  };
+
+  const goToHome = () => {
+    window.scrollTo(0, 0);
+    navigate('/', {
+      state: {
+        storedMajor: major,
+        storedSubject,
+        storedClassesData,
+        storedCurrentClasses,
+        storedSelectedClasses,
+        storedOffset,
+        storedEndOffset
+      }
+    });
   };
 
   if (error) {
@@ -112,7 +149,7 @@ export default function Jobs() {
         <Subtitle string={"Error"} />
         <p>{error}</p>
         <button
-          onClick={goToSecondaryPage}
+          onClick={goToCareerInsights}
           style={{
             color: 'white',
             backgroundColor: '#E84A27',
@@ -130,7 +167,7 @@ export default function Jobs() {
           onMouseEnter={(e) => ((e.target as HTMLElement).style.backgroundColor = '#13294B')}
           onMouseLeave={(e) => ((e.target as HTMLElement).style.backgroundColor = '#E84A27')}
         >
-          Back to Minors
+          Back to Career Insights
         </button>
       </div>
     );
@@ -197,16 +234,25 @@ export default function Jobs() {
               )}
             </div>
   
-            {/* Back Button */}
-            <button
-              onClick={goToSecondaryPage}
-              className="mt-12 w-full max-w-xs mx-auto py-4 px-6 bg-gradient-to-r from-[#E84A27] to-[#13294B] text-white font-semibold rounded-xl hover:shadow-xl hover:brightness-110 transform hover:-translate-y-0.5 transition-all duration-300 flex items-center justify-center space-x-2"
-            >
-              <span>Back to Minors</span>
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 111.414 1.414L4.414 9H17a1 1 0 110 2H4.414l5.293 5.293a1 1 0 010 1.414z" clipRule="evenodd" />
-              </svg>
-            </button>
+            {/* Navigation Buttons */}
+            <div className="mt-12 flex flex-col sm:flex-row gap-4 justify-center">
+              <button
+                onClick={goToHome}
+                className="py-4 px-6 bg-[#E84A27] text-white font-semibold rounded-xl hover:shadow-xl hover:brightness-110 transform hover:-translate-y-0.5 transition-all duration-300 flex items-center justify-center space-x-2"
+              >
+                <span>🏠 Back to Home</span>
+              </button>
+
+              <button
+                onClick={goToCareerInsights}
+                className="py-4 px-6 bg-[#13294B] text-white font-semibold rounded-xl hover:shadow-xl hover:brightness-110 transform hover:-translate-y-0.5 transition-all duration-300 flex items-center justify-center space-x-2"
+              >
+                <span>⬅️ Back to Career Insights</span>
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 111.414 1.414L4.414 9H17a1 1 0 110 2H4.414l5.293 5.293a1 1 0 010 1.414z" clipRule="evenodd" />
+                </svg>
+              </button>
+            </div>
           </div>
         </div>
       </div>

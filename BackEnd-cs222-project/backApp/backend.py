@@ -1,13 +1,22 @@
 import os
+import json
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 import pandas as pd
-import numpy as np
 from JobInfoAPI import get_career_choices_for_major_minor
 
+CSV_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'course-catalog.csv')
 
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # Project root (BackEnd-cs222-project/)
-CSV_PATH = os.path.join(BASE_DIR, 'course-catalog.csv')
+def get_course_credits(gpaFile, course_name):
+    """Helper function to get credit hours for a course"""
+    try:
+        if not gpaFile["courseName"].eq(course_name).any():
+            return 0
+        firstIndex = (gpaFile["courseName"] == course_name).idxmax()
+        creditRow = int((gpaFile.loc[firstIndex, "Credit Hours"])[0:1])
+        return int(float(str(creditRow).replace(' hours.', ''))) if pd.notna(creditRow) else 0
+    except (KeyError, ValueError):
+        return 0
 
 @api_view(["GET"])
 def home(request):
@@ -48,7 +57,159 @@ def job_recommendations(request):
     except Exception as e:
         print(f"Error fetching job recommendations: {e}")
         return Response({"error": "Failed to fetch job recommendations", "jobs": []}, status=500)
-    
+
+@api_view(["POST"])
+def career_insights(request):
+    major = request.data.get("major", "")
+    minor = request.data.get("minor", "")
+
+    if not major or not minor:
+        return Response({"error": "Missing required fields: 'major' and 'minor'"}, status=400)
+
+    try:
+        # Use AI to generate dynamic career insights
+        import google.generativeai as genai
+        from dotenv import load_dotenv
+
+        # Load environment variables
+        load_dotenv()
+
+        # Configure Gemini API
+        api_key = os.getenv('GEMINI_API_KEY')
+        if not api_key:
+            # Return basic career insights when no API key
+            return get_basic_insights(major, minor)
+
+        genai.configure(api_key=api_key)
+        model = genai.GenerativeModel('gemini-2.0-flash')
+
+        # Create comprehensive prompt for career insights
+        prompt = f"""
+        Generate career insights for someone with a {major} major and {minor} minor from UIUC.
+
+        Provide insights in the following JSON format ONLY (no additional text):
+        {{
+            "jobTypes": ["job1", "job2", "job3", "job4", "job5"],
+            "salaryRange": {{
+                "entry": "$X,XXX",
+                "mid": "$XX,XXX",
+                "senior": "$XXX,XXX+"
+            }},
+            "topLocations": ["location1, ST", "location2, ST", "location3, ST", "location4, ST", "location5, ST"],
+            "topCompanies": ["company1", "company2", "company3", "company4", "company5"],
+            "growthOutlook": "Brief description of industry growth outlook",
+            "keySkills": ["skill1", "skill2", "skill3", "skill4", "skill5"]
+        }}
+
+        Consider:
+        - Realistic salary ranges for recent graduates
+        - Top companies that hire this combination
+        - Best geographic locations for these careers
+        - Industry growth trends
+        - Essential skills for success
+
+        Make the data realistic and specific to the {major} + {minor} combination.
+        """
+
+        # Generate response
+        response = model.generate_content(prompt)
+        response_text = response.text.strip()
+
+        # Clean up response (remove markdown code blocks if present)
+        response_text = response_text.replace('```json', '').replace('```', '').strip()
+
+        # Parse the JSON response
+        parsed_data = json.loads(response_text)
+
+        # Validate the structure
+        required_fields = ['jobTypes', 'salaryRange', 'topLocations', 'topCompanies', 'growthOutlook', 'keySkills']
+        if not all(field in parsed_data for field in required_fields):
+            raise ValueError("Missing required fields in AI response")
+
+        return Response({
+            "major": major,
+            "minor": minor,
+            "insights": parsed_data,
+            "source": "gemini_api"
+        })
+
+    except Exception as e:
+        # Return basic insights if AI fails
+        return get_basic_insights(major, minor)
+
+def get_basic_insights(major, minor):
+    """Return basic career insights when AI is not available"""
+    # Simple mapping of majors to career categories
+    major_categories = {
+        "Advertising": "marketing",
+        "Business": "business",
+        "Computer Science": "technology",
+        "Engineering": "engineering",
+        "Psychology": "social_sciences",
+        "Biology": "sciences",
+        "Mathematics": "mathematics",
+        "Economics": "business",
+        "English": "humanities",
+        "History": "humanities"
+    }
+
+    # Get category for major
+    major_category = major_categories.get(major, "general")
+
+    # Basic insights based on major category
+    insights_by_category = {
+        "marketing": {
+            "jobTypes": ["Marketing Coordinator", "Digital Marketing Specialist", "Brand Manager", "Market Research Analyst", "Content Creator"],
+            "salaryRange": {"entry": "$45,000", "mid": "$65,000", "senior": "$95,000+"},
+            "topLocations": ["New York, NY", "Los Angeles, CA", "Chicago, IL", "Austin, TX", "Seattle, WA"],
+            "topCompanies": ["Google", "Meta", "Nike", "Procter & Gamble", "Coca-Cola"],
+            "growthOutlook": "Strong growth in digital marketing - 13% increase projected by 2032",
+            "keySkills": ["Digital Marketing", "Social Media", "Content Creation", "Analytics", "Creativity"]
+        },
+        "business": {
+            "jobTypes": ["Business Analyst", "Project Manager", "Management Consultant", "Financial Analyst", "Operations Manager"],
+            "salaryRange": {"entry": "$55,000", "mid": "$75,000", "senior": "$110,000+"},
+            "topLocations": ["New York, NY", "Chicago, IL", "Houston, TX", "Atlanta, GA", "Boston, MA"],
+            "topCompanies": ["Deloitte", "PwC", "Goldman Sachs", "JPMorgan Chase", "Amazon"],
+            "growthOutlook": "Stable growth in business services - 8% increase projected by 2032",
+            "keySkills": ["Data Analysis", "Project Management", "Communication", "Leadership", "Problem Solving"]
+        },
+        "technology": {
+            "jobTypes": ["Software Developer", "Data Analyst", "Systems Analyst", "IT Consultant", "Product Manager"],
+            "salaryRange": {"entry": "$70,000", "mid": "$100,000", "senior": "$150,000+"},
+            "topLocations": ["San Francisco, CA", "Seattle, WA", "Austin, TX", "New York, NY", "Boston, MA"],
+            "topCompanies": ["Google", "Microsoft", "Amazon", "Apple", "Meta"],
+            "growthOutlook": "High growth in technology - 15% increase projected by 2032",
+            "keySkills": ["Programming", "Data Analysis", "Problem Solving", "Communication", "Continuous Learning"]
+        },
+        "engineering": {
+            "jobTypes": ["Mechanical Engineer", "Electrical Engineer", "Civil Engineer", "Project Engineer", "Systems Engineer"],
+            "salaryRange": {"entry": "$65,000", "mid": "$90,000", "senior": "$125,000+"},
+            "topLocations": ["Houston, TX", "Seattle, WA", "San Francisco, CA", "Chicago, IL", "Boston, MA"],
+            "topCompanies": ["Boeing", "Tesla", "Google", "Apple", "SpaceX"],
+            "growthOutlook": "Strong growth in engineering - 6% increase projected by 2032",
+            "keySkills": ["Technical Design", "Problem Solving", "Project Management", "CAD Software", "Mathematics"]
+        },
+        "general": {
+            "jobTypes": ["Project Coordinator", "Business Analyst", "Operations Specialist", "Research Assistant", "Program Manager"],
+            "salaryRange": {"entry": "$50,000", "mid": "$70,000", "senior": "$100,000+"},
+            "topLocations": ["Chicago, IL", "New York, NY", "Los Angeles, CA", "Houston, TX", "Phoenix, AZ"],
+            "topCompanies": ["Amazon", "Walmart", "Google", "Microsoft", "Apple"],
+            "growthOutlook": "Moderate growth across industries - 5% increase projected by 2032",
+            "keySkills": ["Communication", "Organization", "Problem Solving", "Adaptability", "Teamwork"]
+        }
+    }
+
+    # Get insights for this major's category
+    insights = insights_by_category.get(major_category, insights_by_category["general"])
+
+    return Response({
+        "major": major,
+        "minor": minor,
+        "insights": insights,
+        "source": "basic_insights"
+    })
+
 @api_view(["GET", "POST"])  
 def minor_progress(request):
     # Variables
@@ -279,33 +440,15 @@ def minor_progress(request):
             else:
                 courses = [course]
             for cls in courses:
-                try:
-                    firstIndex = (gpaFile["courseName"] == cls).idxmax()
-                    if not gpaFile["courseName"].eq(cls).any():
-                        print(f"Course {cls} not found in CSV")
-                        continue
-                    creditRow = int ((gpaFile.loc[firstIndex, "Credit Hours"])[0:1])
-                    creditRow = int(float(str(creditRow).replace(' hours.', ''))) if pd.notna(creditRow) else 0
-                    current_credit[minor] += creditRow
-                except (KeyError, ValueError) as e:
-                    print(f"Error calculating elective credits for {cls}: {e}")
-                    continue
+                credits = get_course_credits(gpaFile, cls)
+                current_credit[minor] += credits
 
     # Calculate credit hours from required courses
     for minor in minors_required:
         common_elements = list(set(inputted_classes) & set(minors_required[minor]))
         for cls in common_elements:
-            try:
-                firstIndex = (gpaFile["courseName"] == cls).idxmax()
-                if not gpaFile["courseName"].eq(cls).any():
-                    print(f"Course {cls} not found in CSV")
-                    continue
-                creditRow = int ((gpaFile.loc[firstIndex, "Credit Hours"])[0:1])
-                creditRow = int(float(str(creditRow).replace(' hours.', ''))) if pd.notna(creditRow) else 0
-                current_credit[minor] += creditRow
-            except (KeyError, ValueError) as e:
-                print(f"Error calculating required credits for {cls}: {e}")
-                continue
+            credits = get_course_credits(gpaFile, cls)
+            current_credit[minor] += credits
 
     # Calculate the percentage completed
     for minor in percentage_complete:
@@ -317,7 +460,3 @@ def minor_progress(request):
     return Response({
         "percentages": percentage_complete,
     })
-
-# def topMinors(minors):
-#     top3 = sorted(minors.items(), key=lambda x: x[1], reverse=True)[:3]
-#     return top3

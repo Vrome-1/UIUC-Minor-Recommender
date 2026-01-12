@@ -1,9 +1,6 @@
 "use client";
-import Title from "../components/Title.js";
-import Subtitle from '../components/subtitle2.js';
-import React, { useEffect } from 'react'; 
+import React, { useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import MinorPercentList from "../components/MinorPercentList.js";
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas-pro';
 
@@ -18,6 +15,7 @@ export default function Secondary({ refresh = 0 }) {
   const minors = Object.keys(minorData.percentages);
 
   const goToHomePage = () => {
+    window.scrollTo(0, 0);
     navigate('/', { 
       state: { 
         storedMajor : selectedMajor, 
@@ -43,7 +41,20 @@ export default function Secondary({ refresh = 0 }) {
       console.error("No major selected. Navigation aborted.");
       return;
     }
-    navigate('/jobs', { state: { major: selectedMajor, minor, minorDataStored: minorData, storedSubject } });
+    window.scrollTo(0, 0);
+    navigate('/careerinsights', {
+      state: {
+        major: selectedMajor,
+        minor,
+        minorDataStored: minorData,
+        storedSubject,
+        storedClassesData,
+        storedCurrentClasses,
+        storedSelectedClasses,
+        storedOffset,
+        storedEndOffset
+      }
+    });
   };
 
 
@@ -90,26 +101,31 @@ const downloadPDF = async () => {
 
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#13294B]/5 via-white to-[#E84A27]/5 p-8">
-      <div className="max-w-3xl mx-auto bg-white rounded-3xl shadow-xl overflow-hidden">
-        <div className="bg-gradient-to-r from-[#13294B] to-[#E84A27] h-2 w-full"></div>
-        
-        <div className="p-10 space-y-10">
+    <div className="min-h-screen bg-gradient-to-br from-[#13294B]/5 via-white to-[#E84A27]/5">
+      <div className="w-full min-h-screen bg-white">
+        <div className="bg-gradient-to-r from-[#13294B] to-[#E84A27] h-4 w-full"></div>
+
+        <div className="p-8 md:p-12 lg:p-16 space-y-12">
 
           {/* Content to be converted to PDF */}
           <div id="results-to-download" className="space-y-10" style={{ color: "black" }}>
             {/* Header */}
-            <div className="text-center space-y-3">
-              <h1 className="text-3xl font-bold text-[#13294B]">
-                Recommended Minor Data
-              </h1>
-              <p className="text-lg text-[#E84A27] font-medium">
-                Based on your completed courses
-              </p>
+            <div className="text-center space-y-6 py-8">
+              <div className="max-w-4xl mx-auto">
+                <h1 className="text-5xl md:text-6xl font-bold text-[#13294B] mb-4">
+                  UIUC Minor Recommendations
+                </h1>
+                <p className="text-2xl text-[#E84A27] font-semibold mb-4">
+                  Based on your completed courses
+                </p>
+                <p className="text-gray-600 text-lg max-w-2xl mx-auto">
+                  Click on any minor name below to explore career insights and job opportunities
+                </p>
+              </div>
             </div>
 
             {/* Progress Bars */}
-            <div className="space-y-6">
+            <div className="max-w-4xl mx-auto space-y-8">
               {minors.map((minor, index) => {
                 const percentage = percentages[index];
                 let bgColor = '#FF6F61'; // Coral for <40%
@@ -146,24 +162,25 @@ const downloadPDF = async () => {
             </div>
           </div>
 
-          {/* Download as PDF Button */}
-          <button
-            onClick={downloadPDF}
-            className="w-full max-w-xs mx-auto py-3 px-6 bg-[#13294B] text-white font-semibold rounded-xl hover:shadow-xl hover:brightness-110 transform hover:-translate-y-0.5 transition-all duration-300 flex items-center justify-center space-x-2"
-          >
-            <span>Download as PDF</span>
-          </button>
+          {/* Action Buttons */}
+          <div className="max-w-md mx-auto space-y-6">
+            <button
+              onClick={downloadPDF}
+              className="w-full py-4 px-8 bg-[#13294B] text-white font-semibold rounded-xl hover:shadow-xl hover:brightness-110 transform hover:-translate-y-0.5 transition-all duration-300 flex items-center justify-center space-x-3 text-lg"
+            >
+              <span>Download as PDF</span>
+            </button>
 
-          {/* Back Button */}
-          <button
-            onClick={goToHomePage}
-            className="w-full max-w-xs mx-auto py-3 px-6 bg-gradient-to-r from-[#E84A27] to-[#13294B] text-white font-semibold rounded-xl hover:shadow-xl hover:brightness-110 transform hover:-translate-y-0.5 transition-all duration-300 flex items-center justify-center space-x-2"
-          >
-            <span>Back to Home</span>
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-              <path fillRule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clipRule="evenodd" />
-            </svg>
-          </button>
+            <button
+              onClick={goToHomePage}
+              className="w-full py-4 px-8 bg-gradient-to-r from-[#E84A27] to-[#13294B] text-white font-semibold rounded-xl hover:shadow-xl hover:brightness-110 transform hover:-translate-y-0.5 transition-all duration-300 flex items-center justify-center space-x-3 text-lg"
+            >
+              <span>Back to Home</span>
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clipRule="evenodd" />
+              </svg>
+            </button>
+          </div>
         </div>
       </div>
     </div>

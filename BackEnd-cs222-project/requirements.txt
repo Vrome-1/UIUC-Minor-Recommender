@@ -1,0 +1,8 @@
+Django==4.2.27
+djangorestframework==3.16.1
+django-cors-headers==4.9.0
+pandas==2.0.3
+numpy==1.24.3
+google-generativeai==0.8.3
+python-dotenv==1.0.0
+requests==2.31.0
