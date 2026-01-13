@@ -82,9 +82,7 @@ Extras: Axios, TypeScript, ESLint, Prettier
 
 ### 📧 **Contact**
 Have feedback or want to build on it? Feel free to reach out:
-- **Email:** vaanirometra@gmail.com
-- **GitHub:** [@vaanirometra](https://github.com/vaanirometra)
-
+- **Email:** vaanirometra@yahoo.com
 ---
 
 ## 📄 License
